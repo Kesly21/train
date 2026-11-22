@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Train Ticket Booking</title>
+<style>
+:root{--bg:#141c2b;--panel:#0d1422;--line:#26324a;--txt:#dce6f5;--mut:#8da0bd;--acc:#38bdf8;--sf:#ff7a59;--ex:#2fd4ff;--ok:#4ade80;--bad:#f87171;--warn:#f0b37a}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0}
+body{background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);background:rgba(13,20,34,.65)}
+h1{font-size:18px;margin:0}
+.sub{color:var(--mut);font-size:12.5px;margin-top:2px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select,input{font:inherit;color:var(--txt)}
+button,select{background:#0b1220;border:1px solid var(--line);border-radius:7px;padding:7px 12px;cursor:pointer}
+button:hover:not(:disabled),select:hover{border-color:var(--acc)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.pri{background:#0e4f72;border-color:var(--acc)}
+button.okbtn{background:#14532d;border-color:var(--ok)}
+input{background:#0b1220;border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+input:focus,select:focus{outline:1px solid var(--acc)}
+main{max-width:1120px;width:100%;margin:16px auto;padding:0 16px 28px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:15px;color:var(--acc);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.hint{color:var(--mut);font-size:12.5px}
+.warn{color:var(--warn);font-size:12.5px}
+.empty{background:#0b1220;border:1px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--mut)}
+.search-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{color:var(--mut);font-size:12px}
+.search-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#162238;border:1px solid var(--line)}
+.badge.sf{color:var(--sf);border-color:rgba(255,122,89,.4)}
+.badge.ex{color:var(--ex);border-color:rgba(47,212,255,.4)}
+.badge.mix{color:var(--acc);border-color:rgba(56,189,248,.4)}
+.res-list{display:flex;flex-direction:column;gap:10px}
+.opt{background:#0b1220;border:1px solid var(--line);border-radius:9px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.opt:hover{border-color:#3b4f75}
+.opt-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.opt-title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.opt-meta{color:var(--mut);font-size:12.5px}
+.leg{background:#0d1422;border:1px solid #1b263c;border-radius:7px;padding:8px 10px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.layover{color:var(--warn);font-size:12px;padding-left:6px;border-left:2px solid var(--warn)}
+.booked-item{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1b2538}
+.booked-item:last-child{border-bottom:none}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0e4f72;border:1px solid var(--acc);padding:8px 16px;border-radius:999px;z-index:99;display:none}
+label.chk{display:flex;align-items:center;gap:7px;color:var(--txt);font-size:13px;cursor:pointer;padding:8px 0}
+label.chk input{width:16px;height:16px;padding:0;accent-color:var(--acc)}
+.optrow{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.rule{color:var(--mut);font-size:12px;margin-top:10px}
+.note{background:#0b1220;border:1px solid rgba(240,179,122,.45);border-radius:8px;padding:8px 12px;color:var(--warn);font-size:12.5px}
+@media(max-width:820px){
+  .search-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:540px){
+  .search-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Train Ticket Booking</h1>
+    <div class="sub" id="sub">Load your Excel (.xlsx / .csv) to search trains, filter SF &amp; Express, and find logical exchanges at junctions</div>
+  </div>
+  <div class="ctl">
+    <button id="bExcel" class="pri">Load Excel (.xlsx / .csv)</button>
+    <button id="bSample">Load Sample Data</button>
+    <input type="file" id="fExcel" accept=".xlsx,.xlsm,.csv" hidden>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h3>Search Tickets</h3>
+    <div class="search-grid">
+      <div class="field">
+        <label for="sFrom">From Station</label>
+        <select id="sFrom" disabled><option value="">None</option></select>
+      </div>
+      <div class="field">
+        <label for="sTo">To Station</label>
+        <select id="sTo" disabled><option value="">None</option></select>
+      </div>
+      <div class="field">
+        <label for="sType">Train Type</label>
+        <select id="sType">
+          <option value="ALL">SF &amp; Express (Both)</option>
+          <option value="SF">Only SF Express</option>
+          <option value="EX">Only Express</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sFromTime">Earliest Departure (optional)</label>
+        <input id="sFromTime" type="text" placeholder="e.g. 6:00am or 14:00">
+      </div>
+    </div>
+    <div class="search-grid optrow">
+      <div class="field">
+        <label for="sMaxEx">Exchanges allowed</label>
+        <select id="sMaxEx"><option value="0">Direct trains only</option><option value="1">Up to 1 exchange</option><option value="2" selected>Up to 2 exchanges</option></select>
+      </div>
+      <div class="field">
+        <label for="sMinChg">Minimum time to change trains</label>
+        <select id="sMinChg"><option value="5">5 min</option><option value="10" selected>10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select>
+      </div>
+      <div class="field">
+        <label for="sMaxWait">Longest wait at a change</label>
+        <select id="sMaxWait"><option value="60">1 hour</option><option value="120">2 hours</option><option value="180" selected>3 hours</option><option value="240">4 hours</option><option value="360">6 hours</option></select>
+      </div>
+      <div class="field">
+        <label class="chk"><input type="checkbox" id="sShowAll"> Also show exchanges when a direct train exists</label>
+      </div>
+    </div>
+    <div class="rule" id="ruleTxt">Exchanges are only offered where a real change makes sense: at junction stations, never onto a train that already runs your route, and only when they save time.</div>
+    <div class="search-actions">
+      <button id="bSwap" disabled>&#8645; Swap Stations</button>
+      <button id="bSearch" class="pri" disabled>Find Trains</button>
+      <span class="hint" id="statsTxt">Waiting for timetable file...</span>
+    </div>
+  </section>
+
+  <section class="card" id="cResults">
+    <h3>Available Trains &amp; Exchanges <span class="hint" id="resCount">0</span></h3>
+    <div id="results" class="empty">Load your Excel (.xlsx / .csv) or click <strong>Load Sample Data</strong>, then choose From and To stations.</div>
+  </section>
+
+  <section class="card" id="cBooked">
+    <h3>Booked Tickets <span class="hint" id="bookCount">0</span></h3>
+    <div id="booked" class="hint">No tickets booked yet.</div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const ALIAS={SR:'SK'};
+const normSt=s=>{const t=String(s||'').trim().toUpperCase().replace(/\s+/g,' ').replace(/\s*JUNCTION$/,'').trim();return ALIAS[t]||t};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2200)}
+
+/* ---------- time helpers ---------- */
+function parseTime(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number')return Math.round(((v%1)+1)%1*1440)%1440;
+  const s=String(v).trim();if(!s)return null;
+  let m=s.match(/^(\d{1,2})[:.](\d{2})(?::\d{2})?\s*([AaPp])\.?[Mm]?\.?$/);
+  if(m){let h=+m[1]%12;if(/p/i.test(m[3]))h+=12;return h*60+ +m[2]}
+  m=s.match(/^(\d{1,2})[:.](\d{2})(?::\d{2})?$/);
+  if(m&&+m[1]<24)return +m[1]*60+ +m[2];
+  return null;
+}
+function parseFilterTime(s){
+  if(!s||!String(s).trim())return null;
+  const raw=String(s).trim().toLowerCase();
+  const m=raw.match(/^(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap])?\.?m?\.?$/);
+  if(!m)return null;
+  let h=+m[1];const mi=+(m[2]||0);if(h>24||mi>59)return null;
+  if(m[3]){h%=12;if(m[3]==='p')h+=12}else h%=24;
+  return h*60+mi;
+}
+const fmtC=t=>{if(t==null)return'';const m=((t%1440)+1440)%1440;let h=Math.floor(m/60);const mi=m%60,ap=h>=12?'pm':'am';h=h%12||12;return h+':'+String(mi).padStart(2,'0')+ap};
+const fmtL=t=>fmtC(t).replace(/(am|pm)/,' $1').toUpperCase();
+const dayOffset=t=>Math.floor(t/1440);
+const dayStr=t=>{const d=dayOffset(t);return d>0?` (+${d}d)`:d<0?` (${d}d)`:''};
+const fmtDur=mins=>{
+  const m=Math.max(0,Math.round(mins));
+  const h=Math.floor(m/60),rem=m%60;
+  if(h&&rem)return `${h}h ${rem}m`;
+  if(h)return `${h}h`;
+  return `${rem}m`;
+};
+
+/* ---------- Excel / CSV reading ---------- */
+async function readXlsx(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf);let e=u8.length-22;
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Not a valid .xlsx file');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const files={};
+  for(let i=0;i<n;i++){const nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true);
+    files[new TextDecoder().decode(u8.subarray(p+46,p+46+nl))]={m:dv.getUint16(p+10,true),cs:dv.getUint32(p+20,true),lh:dv.getUint32(p+42,true)};p+=46+nl+xl+cl}
+  async function get(name){const f=files[name];if(!f)return null;const l=f.lh,st=l+30+dv.getUint16(l+26,true)+dv.getUint16(l+28,true);const data=u8.slice(st,st+f.cs);
+    if(f.m===0)return new TextDecoder().decode(data);return new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}
+  const dom=s=>new DOMParser().parseFromString(s,'application/xml');const ss=[];const sx=await get('xl/sharedStrings.xml');
+  if(sx)for(const si of dom(sx).getElementsByTagName('si'))ss.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join(''));
+  const sheet=files['xl/worksheets/sheet1.xml']?'xl/worksheets/sheet1.xml':Object.keys(files).filter(k=>/^xl\/worksheets\/[^/]+\.xml$/.test(k)).sort()[0];
+  const x=dom(await get(sheet)),rows=[];
+  for(const r of x.getElementsByTagName('row')){const row=[];
+    for(const c of r.getElementsByTagName('c')){const ref=c.getAttribute('r')||'',col=ref.replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1;
+      const t=c.getAttribute('t'),v=c.getElementsByTagName('v')[0];let val=null;
+      if(t==='s'&&v)val=ss[+v.textContent];else if(t==='inlineStr')val=[...c.getElementsByTagName('t')].map(q=>q.textContent).join('');
+      else if(v)val=t==='str'||t==='b'||t==='e'?v.textContent:parseFloat(v.textContent);row[col]=val}
+    rows[(+r.getAttribute('r')||rows.length+1)-1]=row}
+  return Array.from(rows,r=>r||[])}
+function readCsv(text){const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else if(ch==='"')q=true;else if(ch===','){row.push(cur);cur=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}else cur+=ch}
+  if(cur||row.length){row.push(cur);rows.push(row)}return rows}
+
+/* ---------- timetable parsing & journey graph ---------- */
+let STATIONS=[]; // sorted station codes
+let LABELS={};  // normCode -> display label
+let RUNS=[];    // {id, name, type ('SF'|'EX'), dir ('f'|'r'), stops: [{st, t}]}
+let RUNS_AT={};   // st -> [{run, idx}]
+let RUN_BY_ID={};
+let HUBS=new Set(); // interchange stations
+let HUB_MODE=''; // st -> array of leg objects {runId, trainName, type, dir, fromSt, toSt, dep, arr}
+let BOOKED=[];
+let NOTES=[];
+
+function lev(a,b){const m=a.length,n=b.length,d=[];for(let i=0;i<=m;i++)d[i]=[i];for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+/* A station name that is typed wrongly in one train (e.g. "I" instead of "LI") joins stations that are not neighbours.
+   Detect it: both of its links appear on that one train only, while a similar-looking station is linked to the same neighbours on several trains. */
+function repairTypos(blocks){
+  const key=(a,b)=>a<b?a+'|'+b:b+'|'+a,cnt={},names=new Set(),deg={};
+  const pairsOf=b=>{const r=b.rows.filter(x=>x.st),out=new Set();for(let i=1;i<r.length;i++)if(r[i].st!==r[i-1].st)out.add(key(r[i-1].st,r[i].st));return out};
+  const own=new Map();
+  for(const b of blocks){const ps=pairsOf(b);own.set(b,ps);b.rows.forEach(x=>x.st&&names.add(x.st));
+    for(const k of ps){cnt[k]=(cnt[k]||0)+1;for(const s of k.split('|'))deg[s]=(deg[s]||0)+1}}
+  const sim=(a,b)=>a!==b&&(lev(a,b)<=1||a.includes(b)||b.includes(a));let fixed=0;
+  for(const b of blocks){const r=b.rows.filter(x=>x.st),ps=own.get(b);
+    const other=(x,y)=>(cnt[key(x,y)]||0)-(ps.has(key(x,y))?1:0);                 // trains other than this one that link x and y
+    const home=x=>(deg[x]||0)-[...ps].filter(k=>k.split('|').includes(x)).length;  // links of x on other trains
+    for(let i=1;i<r.length-1;i++){const p=r[i-1].st,c=r[i].st,n=r[i+1].st;
+      if(other(p,c)>0||other(c,n)>0)continue;   // c is really linked to a neighbour on another train -> leave it
+      const need=home(c)<1?2:1;                // a name seen nowhere else needs stronger proof than a known station
+      const cands=[...names].filter(k=>sim(c,k)&&other(p,k)>=need&&other(k,n)>=need);
+      if(cands.length===1){NOTES.push(`${b.name}: "${c}" read as "${cands[0]}" (likely typo in the Excel)`);r[i].st=cands[0];fixed++}}}
+  return fixed}
+function detectType(name){
+  if(/\bSF\b/i.test(name))return 'SF';
+  return 'EX';
+}
+
+function parseTimetable(rows){
+  NOTES=[];RUNS=[];LABELS={};
+  const labCount={};
+  const blocks=[];let cur=null;
+  rows.forEach((r,ri)=>{
+    const nm=String(r[0]==null?'':r[0]).trim();
+    const stRaw=String(r[2]==null?'':r[2]).trim();
+    if(ri===0&&/^name$/i.test(nm))return;
+    if(!nm||nm==='/'||(!stRaw&&r[1]==null&&r[3]==null)){cur=null;return}
+    const name=nm.replace(/\s+/g,' ').replace(/Ezpress/i,'Express');
+    if(!cur||cur.name!==name){cur={name,rows:[]};blocks.push(cur)}
+    const st=normSt(stRaw);
+    if(st){
+      labCount[st]=labCount[st]||{};
+      const disp=stRaw.replace(/\s+/g,' ')||st;
+      labCount[st][disp]=(labCount[st][disp]||0)+1;
+    }
+    cur.rows.push({st,raw:stRaw.replace(/\s+/g,' '),t1:r[1],t2:r[3]})
+  });
+
+  repairTypos(blocks);
+  const seen={};let runSeq=1;
+  for(const b of blocks){
+    seen[b.name]=(seen[b.name]||0)+1;
+    const baseName=seen[b.name]>1?`${b.name} #${seen[b.name]}`:b.name;
+    const type=detectType(baseName);
+    for(const dir of['f','r']){
+      const labelName=dir==='r'?`${baseName} RT`:baseName;
+      const rawSeq=dir==='f'?b.rows.slice():b.rows.slice().reverse();
+      const timed=[];
+      for(const item of rawSeq){
+        if(!item.st)continue;
+        const m=parseTime(dir==='f'?item.t1:item.t2);
+        if(m==null)continue;
+        if(timed.length&&timed[timed.length-1].st===item.st)continue;
+        timed.push({st:item.st,m});
+      }
+      if(timed.length<2)continue;
+      let day=0,prev=timed[0].m;
+      const stops=[{st:timed[0].st,t:prev}];
+      for(let i=1;i<timed.length;i++){
+        let t=timed[i].m+day*1440;
+        while(t<prev){day++;t+=1440}
+        stops.push({st:timed[i].st,t});
+        prev=t;
+      }
+      RUNS.push({id:runSeq++,baseName,name:labelName,type,dir,stops});
+    }
+  }
+
+  const stSet=new Set(),baseSets={};
+  RUNS_AT={};RUN_BY_ID={};
+  for(const run of RUNS){
+    RUN_BY_ID[run.id]=run;run.stSet=new Set(run.stops.map(s=>s.st));
+    run.stops.forEach((s,i)=>{stSet.add(s.st);(RUNS_AT[s.st]=RUNS_AT[s.st]||[]).push({run,idx:i});(baseSets[s.st]=baseSets[s.st]||new Set()).add(run.baseName)});
+  }
+  /* interchange stations = stations your Excel calls "... Junction" (plus the end stations of every train).
+     If the file has no Junction labels, any station served by 2+ different trains counts. */
+  HUBS=new Set();
+  for(const st in labCount)if(Object.keys(labCount[st]).some(k=>/junction$/i.test(k)))HUBS.add(st);
+  HUB_MODE=HUBS.size>=3?'junction':'shared';
+  if(HUB_MODE==='junction'){for(const run of RUNS){HUBS.add(run.stops[0].st);HUBS.add(run.stops[run.stops.length-1].st)}}
+  else HUBS=new Set(Object.keys(baseSets).filter(st=>baseSets[st].size>=2));
+  STATIONS=[...stSet].sort((a,b)=>a.localeCompare(b));
+  for(const st of STATIONS){
+    const entries=labCount[st]?Object.entries(labCount[st]).sort((x,y)=>y[1]-x[1]):[];
+    LABELS[st]=entries.length?entries[0][0]:st;
+  }
+}
+
+/* ---------- search: direct trains + logical exchanges ---------- */
+const PAGE_SIZE=10;
+const STEP_CAP=600000;
+function typeAllowed(type,filter){
+  if(filter==='ALL')return type==='SF'||type==='EX';
+  return type===filter;
+}
+function getOpts(){return{maxEx:+$('sMaxEx').value,minChg:+$('sMinChg').value,maxWait:+$('sMaxWait').value,showAll:$('sShowAll').checked}}
+
+/* Rules for an exchange to be offered (like a real booking system):
+   1. Only at interchange (junction) stations, with a minimum change time and a maximum wait.
+   2. Every train in the journey is used only between its own boarding and alighting station: if a train also stops at the
+      destination, or at any earlier/later station of the journey, you would simply stay on it / board it directly - so no exchange.
+   3. A train and its return (RT) run are never combined, no station is visited twice.
+   4. Exchanges are only shown if no other option leaves at the same time or later and arrives earlier (or equal with fewer changes),
+      and not if they take far longer than the best exchange.
+   5. If a direct train exists for the trip, exchanges are hidden unless "Also show exchanges..." is ticked. */
+function searchJourneys(fromSt,toSt,filter,earliestMod,o){
+  o=o||{maxEx:2,minChg:10,maxWait:180,showAll:false};
+  const directs=[],raw=[],seen=new Set();let steps=0,capped=false;
+
+  for(const run of RUNS){
+    if(!typeAllowed(run.type,filter))continue;
+    const iFrom=run.stops.findIndex(s=>s.st===fromSt);
+    if(iFrom<0)continue;
+    for(let j=iFrom+1;j<run.stops.length;j++){
+      if(run.stops[j].st!==toSt)continue;
+      const dep=run.stops[iFrom].t,arr=run.stops[j].t;
+      if(arr>dep)directs.push({kind:'direct',legs:[{runId:run.id,baseName:run.baseName,trainName:run.name,type:run.type,dir:run.dir,fromSt,toSt,dep,arr}],dep,arr,totalMin:arr-dep,waitMin:0});
+      break;
+    }
+  }
+
+  const maxLegs=Math.min(3,o.maxEx+1);
+  if(maxLegs>=2){
+    const journeyOK=(legs,sts)=>{
+      for(let i=0;i<legs.length;i++){const R=RUN_BY_ID[legs[i].runId];
+        for(let j=0;j<sts.length;j++){if(j===i||j===i+1)continue;if(R.stSet.has(sts[j]))return false}}
+      return true;
+    };
+    const dfs=(curSt,curArr,legs,sts,totalWait)=>{
+      const isLast=legs.length+1>=maxLegs;
+      for(const {run,idx} of (RUNS_AT[curSt]||[])){
+        if(steps++>STEP_CAP){capped=true;return}
+        if(!typeAllowed(run.type,filter))continue;
+        if(legs.some(l=>l.baseName===run.baseName))continue;
+        let touches=false;
+        for(let k=0;k<sts.length-1;k++)if(run.stSet.has(sts[k])){touches=true;break}
+        if(touches)continue;
+        const t0=run.stops[idx].t;
+        const dep=legs.length?t0+1440*Math.ceil((curArr+o.minChg-t0)/1440):t0;
+        const wait=legs.length?dep-curArr:0;
+        if(legs.length&&wait>o.maxWait)continue;
+        const shift=dep-t0;
+        for(let j=idx+1;j<run.stops.length;j++){
+          const s=run.stops[j],arr=s.t+shift;
+          if(arr<=dep)continue;
+          const isDest=s.st===toSt;
+          if(!isDest&&(isLast||!HUBS.has(s.st)||sts.includes(s.st)||run.stSet.has(toSt)))continue;
+          const leg={runId:run.id,baseName:run.baseName,trainName:run.name,type:run.type,dir:run.dir,fromSt:curSt,toSt:s.st,dep,arr,waitBefore:wait};
+          const nl=[...legs,leg],ns=[...sts,s.st],tw=totalWait+wait;
+          if(isDest){
+            if(legs.length&&journeyOK(nl,ns)){
+              const sig=nl.map(l=>l.runId+':'+l.fromSt+'-'+l.toSt+':'+l.dep).join('|');
+              if(!seen.has(sig)){seen.add(sig);raw.push({kind:'exchange',legs:nl,dep:nl[0].dep,arr,totalMin:arr-nl[0].dep,waitMin:tw})}
+            }
+          }else dfs(s.st,arr,nl,ns,tw);
+        }
+      }
+    };
+    dfs(fromSt,null,[],[fromSt],0);
+  }
+
+  const frame=x=>{const d=((x.dep%1440)+1440)%1440;return{d,a:d+x.totalMin}};
+  const passTime=opt=>earliestMod==null||frame(opt).d>=earliestMod;
+  const fDirect=directs.filter(passTime);
+  let ex=raw.filter(passTime);
+
+  let hidden=0;
+  if(fDirect.length&&!o.showAll){hidden=ex.length;ex=[]}
+
+  if(ex.length){
+    if(ex.length>5000)ex=ex.sort((a,b)=>a.totalMin-b.totalMin).slice(0,5000);
+    ex.forEach(x=>x._f=frame(x));fDirect.forEach(x=>x._f=frame(x));
+    const dom=(A,B)=>A._f.d>=B._f.d&&A._f.a<=B._f.a&&A.legs.length<=B.legs.length&&(A._f.d>B._f.d||A._f.a<B._f.a||A.legs.length<B.legs.length);
+    ex=ex.filter(B=>!ex.some(A=>A!==B&&dom(A,B))&&!fDirect.some(D=>dom(D,B)));
+    if(ex.length){const best=Math.min(...ex.map(x=>x.totalMin));ex=ex.filter(x=>x.totalMin<=best*1.6+60)}
+  }
+
+  const amPmCmp=(a,b)=>{const ma=((a.dep%1440)+1440)%1440,mb=((b.dep%1440)+1440)%1440;if(ma!==mb)return ma-mb;if(a.dep!==b.dep)return a.dep-b.dep;return a.totalMin-b.totalMin};
+  const exCmp=(a,b)=>a.legs.length!==b.legs.length?a.legs.length-b.legs.length:amPmCmp(a,b);
+  fDirect.sort(amPmCmp);ex.sort(exCmp);
+  return{directs:fDirect,exchanges:ex,hidden,capped};
+}
+
+/* nothing found with the chosen settings? widen the allowed wait at a change step by step (never below the chosen limit) */
+function searchWithFallback(fromSt,toSt,filter,earliestMod,o){
+  const res=searchJourneys(fromSt,toSt,filter,earliestMod,o);
+  if(!res.directs.length&&!res.exchanges.length&&o.maxEx>0){
+    for(const w of [360,600]){
+      if(w<=o.maxWait)continue;
+      const r2=searchJourneys(fromSt,toSt,filter,earliestMod,Object.assign({},o,{maxWait:w}));
+      if(r2.exchanges.length){r2.relaxedWait=w;return r2}
+    }
+  }
+  return res;
+}
+
+/* ---------- UI rendering ---------- */
+let LAST_SEARCH=null;
+let CUR_PAGE=1;
+function runSearch(){CUR_PAGE=1;renderSearch()}
+function updateStats(){
+  if(!STATIONS.length)return;
+  const o=getOpts();
+  $('statsTxt').textContent=`${STATIONS.length} stations ready · `+(o.maxEx?`${HUBS.size} interchange stations · change ${fmtDur(o.minChg)}–${fmtDur(o.maxWait)}`:'direct trains only');
+  $('ruleTxt').textContent=HUB_MODE==='junction'
+    ?'Exchanges are only offered at junction stations (the ones your Excel marks "Junction", plus terminal stations), never onto a train that already runs your route, and only when they save time.'
+    :'Your file has no "Junction" labels, so exchanges are offered at stations served by 2 or more different trains, never onto a train that already runs your route, and only when they save time.';
+}
+
+function populateStations(keepFrom,keepTo){
+  const fSel=$('sFrom'),tSel=$('sTo');
+  if(!STATIONS.length){
+    fSel.innerHTML='<option value="">None</option>';
+    tSel.innerHTML='<option value="">None</option>';
+    fSel.disabled=tSel.disabled=$('bSwap').disabled=$('bSearch').disabled=true;
+    return;
+  }
+  const opts='<option value="">None</option>'+STATIONS.map(st=>`<option value="${esc(st)}">${esc(LABELS[st]||st)}</option>`).join('');
+  fSel.innerHTML=opts;
+  tSel.innerHTML=opts;
+  fSel.disabled=tSel.disabled=$('bSwap').disabled=$('bSearch').disabled=false;
+  fSel.value=(keepFrom&&STATIONS.includes(keepFrom))?keepFrom:'';
+  tSel.value=(keepTo&&STATIONS.includes(keepTo))?keepTo:'';
+}
+
+function typeBadge(opt){
+  const types=new Set(opt.legs.map(l=>l.type));
+  if(types.size>1)return '<span class="badge mix">SF + EXP</span>';
+  if(types.has('SF'))return '<span class="badge sf">SF Express</span>';
+  return '<span class="badge ex">Express</span>';
+}
+
+function renderSearch(){
+  const resBox=$('results');
+  if(!STATIONS.length){
+    $('resCount').textContent='0';
+    resBox.className='empty';
+    resBox.innerHTML='Load your Excel (.xlsx / .csv) or click <strong>Load Sample Data</strong>, then choose From and To stations.';
+    return;
+  }
+  const fromSt=$('sFrom').value,toSt=$('sTo').value,filter=$('sType').value;
+  const earliestMod=parseFilterTime($('sFromTime').value);
+  if($('sFromTime').value.trim()&&earliestMod==null){
+    toast('Earliest time not understood (use e.g. 6:00am or 14:00)');
+  }
+  if(!fromSt||!toSt){
+    $('resCount').textContent='0';
+    resBox.className='empty';
+    resBox.textContent='Choose From and To stations (both default to None) and click Find Trains.';
+    return;
+  }
+  if(fromSt===toSt){
+    $('resCount').textContent='0';
+    resBox.className='empty';
+    resBox.textContent='From and To stations are the same. Pick two different stations.';
+    return;
+  }
+
+  const o=getOpts();
+  const {directs,exchanges,hidden,capped,relaxedWait}=searchWithFallback(fromSt,toSt,filter,earliestMod,o);
+  const combined=[
+    ...directs.map((opt,idx)=>({opt,key:`d:${idx}`})),
+    ...exchanges.map((opt,idx)=>({opt,key:`e:${idx}`}))
+  ];
+  LAST_SEARCH={fromSt,toSt,filter,directs,exchanges,combined};
+  const total=combined.length;
+  $('resCount').textContent=total+(capped?'+':'');
+
+  if(!total){
+    resBox.className='empty';
+    resBox.innerHTML=`<strong>Nothing is available</strong> between <strong>${esc(LABELS[fromSt]||fromSt)}</strong> and <strong>${esc(LABELS[toSt]||toSt)}</strong> for the selected train type${o.maxEx?` (changes only at junction stations, ${fmtDur(o.minChg)}&ndash;${fmtDur(o.maxWait)} to change trains)`:' (direct trains only)'}.${hidden?'':''}`;
+    return;
+  }
+
+  const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  if(CUR_PAGE>totalPages)CUR_PAGE=totalPages;
+  if(CUR_PAGE<1)CUR_PAGE=1;
+  const startIdx=(CUR_PAGE-1)*PAGE_SIZE;
+  const pageItems=combined.slice(startIdx,startIdx+PAGE_SIZE);
+
+  resBox.className='res-list';
+  let html=`<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px">
+    <div class="hint">Showing <strong>${startIdx+1}&ndash;${Math.min(total,startIdx+PAGE_SIZE)}</strong> of <strong>${total}${capped?'+':''}</strong> (${directs.length} direct, ${exchanges.length} exchange)${capped?' &middot; <span class="warn">search limited to keep the page fast</span>':''}</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button id="pPrev"${CUR_PAGE<=1?' disabled':''}>&lsaquo; Prev</button>
+      <span class="hint">Page ${CUR_PAGE} / ${totalPages}</span>
+      <button id="pNext"${CUR_PAGE>=totalPages?' disabled':''}>Next &rsaquo;</button>
+    </div>
+  </div>`;
+
+  if(relaxedWait)html+=`<div class="note">No connection was found with waits up to ${fmtDur(o.maxWait)} at a change, so these connections allow up to ${fmtDur(relaxedWait)}.</div>`;
+  if(hidden)html+=`<div class="note">${hidden} exchange option${hidden>1?'s are':' is'} hidden because direct trains exist for this trip. Tick &ldquo;Also show exchanges when a direct train exists&rdquo; to see ${hidden>1?'them':'it'}.</div>`;
+  pageItems.forEach(({opt,key})=>{
+    if(opt.kind==='direct'){
+      const l=opt.legs[0];
+      html+=`<div class="opt">
+        <div class="opt-top">
+          <div class="opt-title">
+            <span class="dot" style="background:${l.type==='SF'?'var(--sf)':'var(--ex)'}"></span>
+            <span>${esc(l.trainName)}</span>
+            ${typeBadge(opt)}
+            <span>${fmtL(opt.dep)}${dayStr(opt.dep)} &rarr; ${fmtL(opt.arr)}${dayStr(opt.arr)}</span>
+          </div>
+          <div class="opt-meta">Direct &middot; Duration: <strong>${fmtDur(opt.totalMin)}</strong></div>
+        </div>
+        <div class="leg">
+          <div><strong>${esc(LABELS[l.fromSt]||l.fromSt)}</strong> (${fmtC(l.dep)}) &rarr; <strong>${esc(LABELS[l.toSt]||l.toSt)}</strong> (${fmtC(l.arr)})</div>
+          <button class="pri" data-book="${key}">Book Ticket</button>
+        </div>
+      </div>`;
+    }else{
+      const stopsVia=opt.legs.slice(0,-1).map(l=>LABELS[l.toSt]||l.toSt).join(' &rarr; ');
+      html+=`<div class="opt">
+        <div class="opt-top">
+          <div class="opt-title">
+            ${typeBadge(opt)}
+            <span>${opt.legs.length-1} Exchange${opt.legs.length-1>1?'s':''} at ${stopsVia}</span>
+            <span>${fmtL(opt.dep)}${dayStr(opt.dep)} &rarr; ${fmtL(opt.arr)}${dayStr(opt.arr)}</span>
+          </div>
+          <div class="opt-meta">Total: <strong>${fmtDur(opt.totalMin)}</strong> &middot; Layover: <strong>${fmtDur(opt.waitMin)}</strong></div>
+        </div>`;
+      opt.legs.forEach((leg,li)=>{
+        if(li>0){
+          html+=`<div class="layover">Change trains at <strong>${esc(LABELS[leg.fromSt]||leg.fromSt)}</strong> &middot; wait <strong>${fmtDur(leg.waitBefore)}</strong></div>`;
+        }
+        html+=`<div class="leg">
+          <div>
+            <span class="dot" style="background:${leg.type==='SF'?'var(--sf)':'var(--ex)'}"></span>
+            <strong>${esc(leg.trainName)}</strong>:
+            <strong>${esc(LABELS[leg.fromSt]||leg.fromSt)}</strong> (${fmtC(leg.dep)}${dayStr(leg.dep)}) &rarr;
+            <strong>${esc(LABELS[leg.toSt]||leg.toSt)}</strong> (${fmtC(leg.arr)}${dayStr(leg.arr)})
+          </div>
+        </div>`;
+      });
+      html+=`<div style="display:flex;justify-content:flex-end"><button class="pri" data-book="${key}">Book Exchange Ticket</button></div></div>`;
+    }
+  });
+
+  if(totalPages>1){
+    html+=`<div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:4px">
+      <button id="pPrev2"${CUR_PAGE<=1?' disabled':''}>&lsaquo; Prev Page</button>
+      <span class="hint">Page ${CUR_PAGE} / ${totalPages}</span>
+      <button id="pNext2"${CUR_PAGE>=totalPages?' disabled':''}>Next Page &rsaquo;</button>
+    </div>`;
+  }
+
+  resBox.innerHTML=html;
+}
+
+function renderBooked(){
+  $('bookCount').textContent=BOOKED.length;
+  const box=$('booked');
+  if(!BOOKED.length){
+    box.className='hint';
+    box.textContent='No tickets booked yet.';
+    return;
+  }
+  box.className='';
+  box.innerHTML=BOOKED.map((b,i)=>`<div class="booked-item">
+    <div>
+      <div><strong>${esc(LABELS[b.fromSt]||b.fromSt)} &rarr; ${esc(LABELS[b.toSt]||b.toSt)}</strong> &middot; ${fmtL(b.dep)} &rarr; ${fmtL(b.arr)} (${fmtDur(b.totalMin)})</div>
+      <div class="hint">${b.legs.map(l=>`${esc(l.trainName)} (${esc(LABELS[l.fromSt]||l.fromSt)} ${fmtC(l.dep)}&rarr;${esc(LABELS[l.toSt]||l.toSt)} ${fmtC(l.arr)})`).join(' + ')}</div>
+    </div>
+    <button data-cancel="${i}">Cancel</button>
+  </div>`).join('');
+}
+
+$('results').addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-book]');
+  if(!btn||!LAST_SEARCH)return;
+  const [kind,idxStr]=btn.dataset.book.split(':');
+  const idx=+idxStr;
+  const opt=kind==='d'?LAST_SEARCH.directs[idx]:LAST_SEARCH.exchanges[idx];
+  if(!opt)return;
+  BOOKED.unshift({
+    fromSt:LAST_SEARCH.fromSt,
+    toSt:LAST_SEARCH.toSt,
+    dep:opt.dep,
+    arr:opt.arr,
+    totalMin:opt.totalMin,
+    legs:opt.legs
+  });
+  renderBooked();
+  toast('Ticket booked');
+});
+
+$('booked').addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-cancel]');
+  if(!btn)return;
+  BOOKED.splice(+btn.dataset.cancel,1);
+  renderBooked();
+  toast('Ticket cancelled');
+});
+
+/* ---------- file loading & sample data ---------- */
+async function loadFile(f){
+  try{
+    const rows=/\.csv$/i.test(f.name)?readCsv(await f.text()):await readXlsx(await f.arrayBuffer());
+    parseTimetable(rows);
+    if(!RUNS.length)throw new Error('No trains found - expected columns Name, Time 1, Station, Time 2');
+    populateStations();
+    $('sub').innerHTML=`<strong>${esc(f.name)}</strong>: ${RUNS.length} train runs across ${STATIONS.length} stations`+(NOTES.length?` &middot; <a href="#" id="nLink" style="color:var(--warn)">${NOTES.length} Excel typo(s) corrected</a>`:'');
+    const nl=$('nLink');if(nl)nl.onclick=ev=>{ev.preventDefault();alert(NOTES.join('\n'))};
+    updateStats();
+    renderSearch();
+    toast('Timetable loaded');
+  }catch(err){
+    console.error(err);
+    alert('Could not read file: '+err.message);
+  }
+}
+
+const SAMPLE_ROWS=[
+  ['Name','Time 1','Station','Time 2'],
+  ['A - B SF Express','07:00','A','08:15'],
+  ['A - B SF Express','07:35','B','06:20'],
+  ['/','/','/','/'],
+  ['B - C Express','08:45','B','10:30'],
+  ['B - C Express','10:00','C','08:15'],
+  ['/','/','/','/'],
+  ['B - D SF Express','09:10','B','11:40'],
+  ['B - D SF Express','11:10','D','08:40'],
+  ['/','/','/','/'],
+  ['A - C Express','13:00','A','15:10'],
+  ['A - C Express','14:40','C','12:30'],
+  ['/','/','/','/'],
+  ['A - D SF Express','16:00','A','19:15'],
+  ['A - D SF Express','18:45','D','15:30']
+];
+
+function loadSample(){
+  parseTimetable(SAMPLE_ROWS);
+  populateStations('','');
+  $('sub').innerHTML=`<strong>Sample Data</strong>: ${RUNS.length} train runs across ${STATIONS.length} stations (includes direct trains &amp; exchanges)`;
+  updateStats();
+  renderSearch();
+  toast('Sample timetable loaded');
+}
+
+$('bExcel').onclick=()=>$('fExcel').click();
+$('fExcel').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
+$('bSample').onclick=loadSample;
+$('bSwap').onclick=()=>{
+  const a=$('sFrom').value,b=$('sTo').value;
+  $('sFrom').value=b;$('sTo').value=a;
+  if($('sFrom').value&&$('sTo').value)runSearch();
+  else renderSearch();
+};
+$('bSearch').onclick=runSearch;
+$('sFrom').onchange=()=>{if(!$('sFrom').value||!$('sTo').value)renderSearch()};
+$('sTo').onchange=()=>{if(!$('sFrom').value||!$('sTo').value)renderSearch()};
+$('sType').onchange=()=>{if(LAST_SEARCH)runSearch()};
+['sMaxEx','sMinChg','sMaxWait','sShowAll'].forEach(id=>$(id).onchange=()=>{updateStats();if(LAST_SEARCH)runSearch()});
+$('sFromTime').onkeydown=e=>{if(e.key==='Enter')runSearch()};
+$('results').addEventListener('click',e=>{
+  const id=e.target.closest('button')?.id;
+  if(id==='pPrev'||id==='pPrev2'){CUR_PAGE=Math.max(1,CUR_PAGE-1);renderSearch();$('cResults').scrollIntoView({block:'nearest'})}
+  else if(id==='pNext'||id==='pNext2'){CUR_PAGE=CUR_PAGE+1;renderSearch();$('cResults').scrollIntoView({block:'nearest'})}
+});
+
+['dragenter','dragover'].forEach(t=>window.addEventListener(t,e=>e.preventDefault()));
+window.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0])});
+
+renderBooked();
+</script>
+</body>
+</html>
