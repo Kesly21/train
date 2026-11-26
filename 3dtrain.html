@@ -100,10 +100,13 @@ input[type=range]{width:100%;padding:0;min-height:24px;accent-color:var(--a);tou
 #stick{position:absolute;left:33px;top:33px;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.55);pointer-events:none}
 #bRun{position:fixed;left:max(134px,calc(env(safe-area-inset-left) + 122px));bottom:136px;width:54px;height:54px;border-radius:50%;pointer-events:auto;background:rgba(255,255,255,.18);color:#fff;border:2px solid rgba(255,255,255,.42);font-size:12px;font-weight:700;padding:0;min-height:0}
 #bRun.on{background:var(--gold);color:#18202c;border-color:var(--gold)}
+#bFlyQuick{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:192px;height:38px;min-height:0;padding:0 12px;border-radius:999px;pointer-events:auto;background:rgba(15,23,42,.88);color:#fff;border:1.5px solid rgba(56,189,248,.65);font-size:12px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#bFlyQuick.on{background:rgba(16,185,129,.9);border-color:#6ee7b7;color:#052e16}
 #bF{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:114px;width:76px;height:76px;border-radius:50%;pointer-events:auto;font-size:22px;font-weight:800;background:rgba(47,212,255,.88);color:#04202e;border:2px solid rgba(255,255,255,.45);padding:0;min-height:0;line-height:1.05;box-shadow:0 6px 20px rgba(0,0,0,.45)}
 #bF small{display:block;font-size:10.5px;font-weight:700;margin-top:2px}
-#flyPad{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:198px;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
-#flyPad button{width:54px;height:42px;min-height:0;padding:0;font-size:12px;font-weight:700;border-radius:10px;background:rgba(15,23,42,.88)}
+#flyPad{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:238px;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+#flyPad button{width:62px;height:42px;min-height:0;padding:0;font-size:12px;font-weight:700;border-radius:10px;background:rgba(15,23,42,.9);border-color:var(--a)}
+#flyPad button.on{background:var(--ok);color:#04202e;border-color:#a7f3d0}
 #fh{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:rgba(6,10,18,.82);border:1px solid rgba(255,255,255,.18);padding:5px 12px;border-radius:999px;z-index:26;font-size:12px;white-space:nowrap;pointer-events:none}
 
 /* Mobile / Phone Refinements */
@@ -130,8 +133,9 @@ input[type=range]{width:100%;padding:0;min-height:24px;accent-color:var(--a);tou
   #joy{left:max(10px,env(safe-area-inset-left));bottom:104px;width:102px;height:102px}
   #stick{left:29px;top:29px;width:44px;height:44px}
   #bRun{left:max(118px,calc(env(safe-area-inset-left) + 108px));bottom:128px;width:50px;height:50px;font-size:11px}
+  #bFlyQuick{right:max(10px,env(safe-area-inset-right));bottom:184px;height:36px;font-size:11.5px}
   #bF{right:max(10px,env(safe-area-inset-right));bottom:106px;width:70px;height:70px;font-size:20px}
-  #flyPad{right:max(14px,env(safe-area-inset-right));bottom:184px}
+  #flyPad{right:max(12px,env(safe-area-inset-right));bottom:226px}
   #fh{display:none!important}
   .desktop-only-hint{display:none}
   #worldMap{inset:1.5vh 1.5vw}
@@ -700,7 +704,11 @@ function readCsv(text){
   for(let i=0;i<text.length;i++){const ch=text[i];
     if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
     else if(ch==='"')q=true;else if(ch===','){row.push(cur);cur=''}
-    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}else cur+=ch}
+    else if(ch==='
+'||ch==='
+'){if(ch==='
+'&&text[i+1]==='
+')i++;row.push(cur);rows.push(row);row=[];cur=''}else cur+=ch}
   if(cur||row.length){row.push(cur);rows.push(row)}
   return rows;
 }
@@ -709,7 +717,7 @@ const $=i=>document.getElementById(i);
 const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const C={EX:'#ff8a1f',SF:'#3b82f6',STB:'#fc23cf',GR:'#22c55e',TJ:'#e7ff47',RAJ:'#ef4444',VB:'#f8fafc'};
 const N={EX:'Express',SF:'SF Express',STB:'Shatabdi',GR:'Garib Rath',TJ:'Tejas',RAJ:'Rajdhani',VB:'Vande Bharat'};
-const catOf=n=>/vande|\bvb\b/i.test(n)?'VB':/raj/i.test(n)?'RAJ':/tejas/i.test(n)?'TJ':/garib/i.test(n)?'GR':/shatabdi|stb/i.test(n)?'STB':/\bSF\b/i.test(n)?'SF':'EX';
+const catOf=n=>/vande|vb/i.test(n)?'VB':/raj/i.test(n)?'RAJ':/tejas/i.test(n)?'TJ':/garib/i.test(n)?'GR':/shatabdi|stb/i.test(n)?'STB':/SF/i.test(n)?'SF':'EX';
 
 $('cat').innerHTML='<option value="">All categories</option>'+Object.keys(N).map(k=>`<option value="${k}">${N[k]}</option>`).join('');
 
@@ -1513,6 +1521,30 @@ function setWalkDrawerOpen(open){
   $('bExplorerToggle').classList.toggle('on',open);
 }
 
+function syncFlyUI(){
+  const isTouch=matchMedia('(pointer:coarse)').matches||innerWidth<=760;
+  $('bFly').textContent=flyMode?'✈ Fly: On':'✈ Fly: Off';
+  $('bFly').classList.toggle('on',flyMode);
+  const fq=$('bFlyQuick');
+  if(fq){
+    fq.textContent=flyMode?'✈ Fly: On':'✈ Fly';
+    fq.classList.toggle('on',flyMode);
+    fq.style.display=(walkMode&&isTouch)?'inline-flex':'none';
+  }
+  if($('flyPad')){
+    $('flyPad').style.display=(walkMode&&flyMode&&isTouch)?'flex':'none';
+  }
+}
+
+function toggleFlyMode(){
+  if(!walkMode)return;
+  flyMode=!flyMode;
+  flyHeight=flyMode?Math.max(90,walkPos.y):2.2;
+  walkPos.y=flyHeight;
+  syncFlyUI();
+  $('boardPrompt').textContent=flyMode?'Flight mode: joystick moves & Up/Down changes altitude · tap Map to jump':'Walking mode restored. Walk near a train and tap F to board.';
+}
+
 function startExploring(node){
   walkStationNode=Number.isFinite(node)?node:0;walkMode=true;flyMode=false;flyHeight=2.2;paused=0;T=360;spd=2;done=0;
   buildExplorerWorld();
@@ -1529,7 +1561,7 @@ function startExploring(node){
   $('walkStation').innerHTML=NODES.map(n=>`<option value="${n.i}">${esc(n.name)}${n.adj.length>=3?' · Junction':''}</option>`).join('');
   $('walkStation').value=String(walkStationNode);$('trainSearch').value='';renderWalkSearch();boardableRun=null;
   $('boardPrompt').textContent='Walk near any train, anywhere, and press F to board.';
-  $('bFly').textContent='✈ Fly: Off';
+  syncFlyUI();
   applyQuality();
 }
 
@@ -1541,7 +1573,7 @@ function renderWalkSearch(){
     const d=document.createElement('div');d.className='it';
     const a=NODES[r.stops[0].node].name,b=NODES[r.stops.at(-1).node].name;
     d.innerHTML=`<span><b>${esc(r.base||r.id)}</b><small>Service ${esc(r.id)} · ${esc(a)} → ${esc(b)} · ${fmtT(r.t0)}–${fmtT(r.t1)}</small></span>`;
-    const btn=document.createElement('button');btn.textContent='Board';btn.onclick=()=>{walkMode=false;$('walkTools').style.display='none';$('bExplorerToggle').style.display='none';$('bot').style.display='block';$('bV').style.display='';$('bQ').style.display='';startJourney(r)};
+    const btn=document.createElement('button');btn.textContent='Board';btn.onclick=()=>{walkMode=false;flyMode=false;syncFlyUI();$('walkTools').style.display='none';$('bExplorerToggle').style.display='none';$('bot').style.display='block';$('bV').style.display='';$('bQ').style.display='';startJourney(r)};
     d.appendChild(btn);$('walkResults').appendChild(d);
   }
   if(!matches.length)$('walkResults').textContent='No matching trains found in the loaded timetable.';
@@ -1604,7 +1636,7 @@ function updateWalk(ts){
   if(ts-hudTs>250){
     hudTs=ts;$('clk').textContent=fmtT(T);drawNetworkMap(traffic);if($('worldMap').classList.contains('open'))drawWorldMap();
     const near=traffic[0];
-    $('b1').textContent=near&&near.dist<260?'🚆 '+near.run.id+' passing nearby':'Free roam · '+NODES[walkStationNode].name;
+    $('b1').textContent=near&&near.dist<260?'🚆 '+near.run.id+' passing nearby':(flyMode?'✈ Flying · ':'Free roam · ')+NODES[walkStationNode].name;
     $('b2').textContent=traffic.length+' active scheduled services nearby';
   }
 }
@@ -1613,7 +1645,7 @@ function updateWalk(ts){
    4. SIMULATION LOOP, RADAR, SOUND & CAMERA
    ========================================================================= */
 function startJourney(run,boardAtCurrentTime=false){
-  walkMode=false;$('walkTools').style.display='none';$('bExplorerToggle').style.display='none';
+  walkMode=false;flyMode=false;syncFlyUI();$('walkTools').style.display='none';$('bExplorerToggle').style.display='none';
   $('bot').style.display='block';$('bV').style.display='';$('bQ').style.display='';
   J={run,signals:[],curLat:MAIN_OFF};
   T=boardAtCurrentTime?Math.max(run.t0,Math.min(run.t1,T)):run.t0;
@@ -1621,7 +1653,7 @@ function startJourney(run,boardAtCurrentTime=false){
   build3DWorld(run);
   $('menu').hidden=true;
   $('hud').hidden=false;$('cab').style.display='block';$('stopsP').hidden=true;$('bStops').classList.remove('on');
-  $('ttl').textContent=`${run.id} (${NODES[run.stops[0].node].name} \u2192 ${NODES[run.stops[run.stops.length-1].node].name})`;
+  $('ttl').textContent=`${run.id} (${NODES[run.stops[0].node].name} → ${NODES[run.stops[run.stops.length-1].node].name})`;
   $('bP').textContent='⏸ Pause';
   $('sl').min=run.t0;
   $('sl').max=run.t1;
@@ -1853,16 +1885,16 @@ function frame(ts){
     placed.push({x:bx,z:bz,y:by});
     grp.position.set(bx,by,bz);
     const colHex=C[ai.run.type]||'#3b82f6';
-    setBadgeText(grp.userData.badge,`${ai.sameDir?'\u2192':'\u2190'} ${ai.run.id}`,'#0f172a','#ffffff',colHex);
+    setBadgeText(grp.userData.badge,`${ai.sameDir?'→':'←'} ${ai.run.id}`,'#0f172a','#ffffff',colHex);
     grp.lookAt(cam.position);
   }
   for(const ai of drawn){
     if(!alertText&&Math.abs(ai.along)<700&&ai.dist3D<900){
       if(ai.sameDir){
-        if(myS.spdMpm>ai.s.spdMpm+2.5)alertText=`\u26A1 OVERTAKING: ${ai.run.id}`;
-        else if(ai.s.spdMpm>myS.spdMpm+2.5)alertText=`\u26A0 BEING OVERTAKEN BY: ${ai.run.id}`;
-        else alertText=`\u21C9 RUNNING PARALLEL: ${ai.run.id}`;
-      }else alertText=`\u21C4 CROSSING: ${ai.run.id}`;
+        if(myS.spdMpm>ai.s.spdMpm+2.5)alertText=`⚡ OVERTAKING: ${ai.run.id}`;
+        else if(ai.s.spdMpm>myS.spdMpm+2.5)alertText=`⚠ BEING OVERTAKEN BY: ${ai.run.id}`;
+        else alertText=`⇉ RUNNING PARALLEL: ${ai.run.id}`;
+      }else alertText=`⇄ CROSSING: ${ai.run.id}`;
     }
   }
 
@@ -1884,22 +1916,22 @@ function frame(ts){
     if(alertText){evtEl.hidden=false;evtEl.textContent=alertText}else evtEl.hidden=true;
     const n=run.stops.length;let b1,b2;
     if(myS.halted&&myS.i===n-1){b1='Journey Complete';b2='Arrived at '+NODES[run.stops[myS.i].node].name}
-    else if(myS.halted){b1='Halted at '+NODES[myS.at.node].name;b2='Sched '+fmtT(myS.at.t)+' \u00b7 Next: '+NODES[nx.node].name}
+    else if(myS.halted){b1='Halted at '+NODES[myS.at.node].name;b2='Sched '+fmtT(myS.at.t)+' · Next: '+NODES[nx.node].name}
     else{
       const remD=nx.d-myS.d,nn=NODES[nx.node];
       b1=(remD<1800?'Approaching ':'Next: ')+nn.name+(nn.adj.length>=3?' (Junction)':'');
-      b2='in '+Math.max(0,Math.round(run.arr[myS.i+1]-T))+' min \u00b7 stop '+(myS.i+2)+' of '+n;
+      b2='in '+Math.max(0,Math.round(run.arr[myS.i+1]-T))+' min · stop '+(myS.i+2)+' of '+n;
     }
     $('b1').textContent=b1;$('b2').textContent=b2;
     $('spdv').textContent=myS.halted?0:kmhOf(myS.spdMpm);
     if(nx&&!myS.halted)$('spdn').textContent=((nx.d-myS.d)/SCALE*KM_PER_UNIT).toFixed(1)+' km to '+NODES[nx.node].name;
     else $('spdn').textContent=myS.halted?'Platform':'';
-    $('cons').textContent=(run.nc+1)+' vehicles \u00b7 '+run.nc+' coaches \u00b7 '+Math.round(run.len)+' m';
+    $('cons').textContent=(run.nc+1)+' vehicles · '+run.nc+' coaches · '+Math.round(run.len)+' m';
     if(!$('stopsP').hidden&&ts-(J.spTs||0)>600){
       J.spTs=ts;
       let h='<b>Upcoming stops</b>';
       for(let k=Math.max(0,myS.halted?myS.i+1:myS.i+1);k<Math.min(n,myS.i+7);k++){
-        const s=run.stops[k];h+=`<div class="sr"><span>${esc(NODES[s.node].name)}${NODES[s.node].adj.length>=3?' \u00b7 JN':''}</span><span>${fmtT(run.arr[k])}</span></div>`;
+        const s=run.stops[k];h+=`<div class="sr"><span>${esc(NODES[s.node].name)}${NODES[s.node].adj.length>=3?' · JN':''}</span><span>${fmtT(run.arr[k])}</span></div>`;
       }
       $('stopsP').innerHTML=h;
     }
@@ -1981,14 +2013,7 @@ mapcv.addEventListener('pointerup',e=>{
 
 $('bExplorerToggle').onclick=()=>setWalkDrawerOpen($('walkTools').style.display==='none');
 $('bHideWalk').onclick=()=>setWalkDrawerOpen(false);
-$('bFly').onclick=()=>{
-  flyMode=!flyMode;
-  flyHeight=flyMode?Math.max(90,walkPos.y):2.2;
-  walkPos.y=flyHeight;
-  $('bFly').textContent=flyMode?'✈ Fly: On':'✈ Fly: Off';
-  $('flyPad').style.display=(walkMode&&flyMode&&matchMedia('(pointer:coarse)').matches)?'flex':'none';
-  $('boardPrompt').textContent=flyMode?'Flight mode: move & use Up/Down altitude · tap Map to jump':'Walking mode restored. Walk near a train and tap F to board.';
-};
+$('bFly').onclick=toggleFlyMode;
 addEventListener('keydown',e=>{if(e.code==='KeyM'&&walkMode){$('worldMap').classList.toggle('open');if($('worldMap').classList.contains('open'))drawWorldMap()}});
 
 /* Controls & Unified Pointer / Touch Look */
@@ -2008,9 +2033,9 @@ $('bV').onclick=()=>{
 };
 $('bQ').onclick=()=>{hq=!hq;applyQuality()};
 $('bBack').onclick=()=>{
-  walkMode=false;flyMode=false;J=null;
+  walkMode=false;flyMode=false;syncFlyUI();J=null;
   $('hud').hidden=true;$('menu').hidden=false;
-  $('walkTools').style.display='none';$('bExplorerToggle').style.display='none';$('flyPad').style.display='none';
+  $('walkTools').style.display='none';$('bExplorerToggle').style.display='none';
   $('bot').style.display='block';
 };
 
@@ -2101,72 +2126,81 @@ function exitTrain(){
   const p=posAtW(run,st.d-70),lat=(J.curLat||MAIN_OFF)+6.5,Tk=T,sp=spd;
   let bi=0,bd=1e18;
   NODES.forEach(n=>{const d=Math.hypot(n.wx-p.x,n.wz-p.z);if(d<bd){bd=d;bi=n.i}});
-  startExploring(bi);
-  if(isMobileDevice)setWalkDrawerOpen(false);
-  T=((Tk%1440)+1440)%1440;spd=sp;$('sp').value=String(spd);$('sl').min=0;$('sl').max=1440;$('sl').value=T;
-  walkPos.set(p.x+p.nx*lat,2.2,p.z+p.nz*lat);walkYaw=Math.atan2(p.nx,p.nz);walkPitch=-.05;flyMode=false;J.stTs=0;
+  startExploring(bi);T=Tk;spd=sp;walkPos.set(p.x+p.nx*lat,2.2,p.z+p.nz*lat);
+  walkYaw=Math.atan2(-p.tx,-p.tz);walkPitch=-.04;cam.position.copy(walkPos);cam.rotation.set(walkPitch,walkYaw,0);
+  $('b1').textContent='Got off '+run.id;
+  $('b2').textContent='Walk around, board another train, or press F to get back on';
 }
 function pressF(){
   if(walkMode){
-    const b=findBoardable();
-    if(b){walkKeys={};joy.x=joy.y=0;$('bRun').classList.remove('on');T=b.tt;startJourney(b.run,true)}
-  }else if(J&&J.run){
-    exitTrain();
+    const bd=findBoardable();
+    if(bd){
+      const Tk=T,sp=spd;
+      startJourney(bd.run,true);T=Tk;spd=sp;
+      $('b1').textContent='Boarded '+bd.run.id;
+      $('b2').textContent='Press F anytime to get off';
+    }
+    return;
   }
+  if(J&&J.run)exitTrain();
 }
 
-(function(){
-  const j=$('joy'),st=$('stick');let id=null;const R=40;
-  const mv=e=>{
-    const r=j.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
-    let dx=e.clientX-cx,dy=e.clientY-cy;const m=Math.hypot(dx,dy);
-    if(m>R){dx*=R/m;dy*=R/m}
-    st.style.transform=`translate(${dx}px,${dy}px)`;
-    joy.x=dx/R;joy.y=-dy/R;
-  };
-  j.addEventListener('pointerdown',e=>{e.stopPropagation();id=e.pointerId;j.setPointerCapture(id);mv(e)});
-  j.addEventListener('pointermove',e=>{if(e.pointerId===id)mv(e)});
-  const up=e=>{if(e.pointerId===id){id=null;st.style.transform='';joy.x=joy.y=0}};
-  j.addEventListener('pointerup',up);j.addEventListener('pointercancel',up);
-})();
+const tch=document.createElement('div');tch.id='touch';
+tch.innerHTML='<div id="joy"><div id="stick"></div></div><button id="bRun" type="button">Sprint</button><button id="bFlyQuick" type="button" style="display:none">✈ Fly</button><div id="flyPad" style="display:none"><button id="bFlyUp" type="button">▲ Up</button><button id="bFlyDn" type="button">▼ Dn</button></div><button id="bF" type="button">F<small>Board</small></button>';
+document.body.appendChild(tch);
+const fh=document.createElement('div');fh.id='fh';document.body.appendChild(fh);
 
-addEventListener('DOMContentLoaded',()=>{
-  const t=document.createElement('div');t.id='touch';t.style.display='none';
-  t.innerHTML='<div id="joy"><div id="stick"></div></div><button id="bRun" type="button">Run</button><div id="flyPad" style="display:none"><button id="bFlyUp" type="button">Up</button><button id="bFlyDn" type="button">Down</button></div><button id="bF" type="button">F<small>Board</small></button>';
-  document.body.appendChild(t);
-  const f=document.createElement('div');f.id='fh';f.style.display='none';f.textContent='Press F to get off the train right here';
-  document.body.appendChild(f);
-  const bF=$('bF'),bRun=$('bRun');
-  bF.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();pressF()});
-  bRun.addEventListener('click',e=>{e.stopPropagation();walkKeys.ShiftLeft=bRun.classList.toggle('on')});
-  const bindHold=(id,key)=>{
-    const el=$(id);if(!el)return;
-    el.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();walkKeys[key]=true;el.classList.add('on')});
-    const rel=e=>{e.stopPropagation();walkKeys[key]=false;el.classList.remove('on')};
-    el.addEventListener('pointerup',rel);el.addEventListener('pointercancel',rel);el.addEventListener('pointerleave',rel);
+function bindHoldBtn(id,keyName,onClass){
+  const el=$(id);
+  if(!el)return;
+  const setOn=v=>{
+    walkKeys[keyName]=v;
+    if(onClass)el.classList.toggle(onClass,v);
   };
-  bindHold('bFlyUp','FlyUp');bindHold('bFlyDn','FlyDown');
-  setInterval(()=>{
-    const h=$('hud'),inHud=h&&!h.hidden;
-    if(!inHud){t.style.display='none';f.style.display='none';return}
-    const isTouch=matchMedia('(pointer:coarse)').matches||innerWidth<=760;
-    t.style.display=isTouch?'block':'none';
-    if(walkMode){
-      const bd=findBoardable();
-      bF.style.display=bd?'block':'none';
-      if(bd)bF.innerHTML='F<small>Board</small>';
-      $('flyPad').style.display=(isTouch&&flyMode)?'flex':'none';
-      f.style.display='none';
-    }else if(J&&J.run){
-      bF.style.display=isTouch?'block':'none';
-      if(isTouch)bF.innerHTML='F<small>Get off</small>';
-      $('flyPad').style.display='none';
-      f.style.display=isTouch?'none':'block';
-    }else{
-      bF.style.display='none';$('flyPad').style.display='none';f.style.display='none';
-    }
-  },220);
-});
+  el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setOn(true);el.setPointerCapture?.(e.pointerId)});
+  el.addEventListener('pointerup',e=>{e.stopPropagation();setOn(false)});
+  el.addEventListener('pointercancel',e=>{e.stopPropagation();setOn(false)});
+}
+bindHoldBtn('bRun','ShiftLeft','on');
+bindHoldBtn('bFlyUp','FlyUp',null);
+bindHoldBtn('bFlyDn','FlyDown',null);
+
+$('bFlyQuick').addEventListener('click',e=>{e.stopPropagation();toggleFlyMode()});
+$('bF').addEventListener('click',e=>{e.stopPropagation();pressF()});
+
+const joyEl=$('joy'),stick=$('stick');let jId=null;
+joyEl.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jId=e.pointerId;joyEl.setPointerCapture(jId);moveJoy(e)});
+joyEl.addEventListener('pointermove',e=>{if(e.pointerId===jId){e.stopPropagation();moveJoy(e)}});
+joyEl.addEventListener('pointerup',e=>{if(e.pointerId===jId){e.stopPropagation();jId=null;joy={x:0,y:0};stick.style.transform=''}});
+joyEl.addEventListener('pointercancel',e=>{if(e.pointerId===jId){e.stopPropagation();jId=null;joy={x:0,y:0};stick.style.transform=''}});
+function moveJoy(e){
+  const r=joyEl.getBoundingClientRect(),maxR=r.width*.38;
+  let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  const d=Math.hypot(dx,dy);if(d>maxR){dx=dx/d*maxR;dy=dy/d*maxR}
+  joy.x=dx/maxR;joy.y=-dy/maxR;stick.style.transform=`translate(${dx}px,${dy}px)`;
+}
+
+setInterval(()=>{
+  const isTouch=matchMedia('(pointer:coarse)').matches||innerWidth<=760;
+  const inWalk=walkMode&&!!J;
+  $('joy').style.display=inWalk&&isTouch?'block':'none';
+  $('bRun').style.display=inWalk&&isTouch?'block':'none';
+  $('bFlyQuick').style.display=inWalk&&isTouch?'inline-flex':'none';
+  $('flyPad').style.display=inWalk&&flyMode&&isTouch?'flex':'none';
+  if(!J){$('bF').style.display='none';fh.style.display='none';return}
+  if(walkMode){
+    const bd=findBoardable();
+    $('bF').style.display=bd&&isTouch?'block':'none';
+    $('bF').innerHTML=bd?'F<small>Board</small>':'F';
+    fh.style.display=bd&&!isTouch?'block':'none';
+    if(bd)fh.textContent='Press F to board '+bd.run.id;
+  }else{
+    $('bF').style.display=isTouch?'block':'none';
+    $('bF').innerHTML='F<small>Get off</small>';
+    fh.style.display=!isTouch?'block':'none';
+    fh.textContent='Press F to get off train';
+  }
+},150);
 </script>
 </body>
 </html>
