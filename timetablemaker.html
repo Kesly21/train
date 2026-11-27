@@ -85,18 +85,48 @@ tr.st-row.active-peek{background:#172b46;outline:1px solid var(--acc)}
 
 /* Interactive Conflict Badge & Hover/Click Popover */
 .tcell-wrap{display:flex;align-items:center;gap:4px}
-.tcell-main{display:flex;flex-direction:column;align-items:center}
+.clash-slot{width:46px;flex:none;display:flex;justify-content:flex-end;align-items:center}
+.tcell-main{display:flex;flex-direction:column;align-items:center;flex:none}
 .clash-btn{
-  display:inline-flex;align-items:center;gap:2px;
+  display:inline-flex;align-items:center;justify-content:center;gap:2px;
+  width:100%;
   background:rgba(248,113,113,.22);color:#fca5a5;
   border:1px solid var(--bad);border-radius:999px;
-  padding:2px 6px;font-size:10px;font-weight:700;
-  white-space:nowrap;flex:none;cursor:pointer;
+  padding:2px 5px;font-size:10px;font-weight:700;
+  white-space:nowrap;cursor:pointer;
   transition:transform .12s,background .12s;
 }
 .clash-btn:hover{background:rgba(248,113,113,.38);color:#fff;transform:scale(1.06)}
 .clash-btn.tight5{background:rgba(239,68,68,.35);border-color:#ef4444;color:#fff;animation:pulseBadge 1.8s infinite}
 @keyframes pulseBadge{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.45)}50%{box-shadow:0 0 0 4px rgba(239,68,68,0)}}
+
+/* Clock Time Picker Popover */
+.clk-btn{padding:3px 5px !important;font-size:11px !important;min-width:22px !important;color:var(--acc)}
+#clockPop{
+  position:fixed;z-index:98;width:256px;max-width:calc(100vw - 20px);
+  background:#0b1324;border:1.5px solid var(--acc);border-radius:12px;
+  box-shadow:0 14px 34px rgba(0,0,0,.78);display:none;padding:10px;
+}
+.clk-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1e293b}
+.clk-disp{font-size:17px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.3px}
+.clk-dial-wrap{display:flex;justify-content:center;margin:6px 0}
+.clk-dial{
+  position:relative;width:196px;height:196px;border-radius:50%;
+  background:#111c33;border:1px solid #26334d;user-select:none;
+}
+.clk-center{position:absolute;left:50%;top:50%;width:8px;height:8px;background:var(--acc);border-radius:50%;transform:translate(-50%,-50%);z-index:3}
+.clk-hand{position:absolute;left:50%;top:50%;height:2px;background:var(--acc);transform-origin:0 50%;z-index:2;pointer-events:none}
+.clk-num{
+  position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;
+  color:var(--txt);cursor:pointer;z-index:4;border:none;background:transparent;padding:0;
+}
+.clk-num:hover{background:rgba(56,189,248,.22);color:#fff}
+.clk-num.sel{background:var(--acc);color:#0b1220;font-weight:700}
+.clk-foot{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid #1e293b}
+.clk-ampm{display:inline-flex;background:#111827;border:1px solid var(--line);border-radius:7px;padding:2px;gap:2px}
+.clk-ampm button{border:none;background:transparent;padding:3px 8px;font-size:11px;border-radius:5px;color:var(--mut);font-weight:600}
+.clk-ampm button.act{background:#0369a1;color:#fff}
 
 #clashPop{
   position:fixed;z-index:95;width:330px;max-width:calc(100vw - 20px);
@@ -224,6 +254,8 @@ tr.st-row.active-peek{background:#172b46;outline:1px solid var(--acc)}
 
 <!-- Interactive Conflict Hover/Click Popover -->
 <div id="clashPop"></div>
+<!-- Clock Time Picker Popover -->
+<div id="clockPop"></div>
 
 <div class="modal" id="out"><div class="mbox">
   <h2>Export Timetables</h2>
@@ -657,25 +689,26 @@ function showClashPopover(btn,rowIdx,pin,focusSlot){
 
   const slot=focusSlot||(info.t1Conflicts.length&&!info.t2Conflicts.length?'T1':(!info.t1Conflicts.length&&info.t2Conflicts.length?'T2':'ALL'));
   const activeList=slot==='T1'?info.t1Conflicts:slot==='T2'?info.t2Conflicts:info.conflicts;
-  const conflictNames=new Set(activeList.map(c=>c.name+'|'+c.t));
+  const conflictMap=new Map();
+  activeList.forEach(c=>{
+    const key=c.name+'|'+c.t;
+    const prev=conflictMap.get(key);
+    if(!prev||c.diff<prev.diff)conflictMap.set(key,c);
+  });
 
   const pop=$('clashPop');
-  let topConflictsHtml=activeList.length
-    ?activeList.slice().sort((a,b)=>a.diff-b.diff).map(c=>`<div class="cpop-row is-conflict">
-      <span><b>${fmtL(c.t)}</b> &middot; <span class="dot" style="background:${TCOL(c.type)}"></span>${esc(c.name)}</span>
-      <span class="cpop-tag">${c.diff===0?'EXACT':c.diff+'m off'} (${c.which==='T2'?'Time 2 RT':'Time 1'})</span>
-    </div>`).join('')
-    :`<div class="cpop-row"><span class="hint">No conflicts within ±10 min for ${slot==='T2'?'Time 2 (RT)':'Time 1'}</span></div>`;
+  const allAtStn=info.sched.map(x=>{
+    const hit=conflictMap.get(x.name+'|'+x.t);
+    return{...x,isMine:false,hit};
+  });
+  if(t1!=null&&(slot==='ALL'||slot==='T1'))allAtStn.push({t:t1,name:(D.name||'New Train')+' (Time 1)',type:D.type,isMine:true,orderBias:0.1});
+  if(t2!=null&&(slot==='ALL'||slot==='T2'))allAtStn.push({t:t2,name:(D.name||'New Train')+' (Time 2 RT)',type:D.type,isMine:true,orderBias:0.2});
+  allAtStn.sort((a,b)=>(modDay(a.t)+(a.orderBias||0))-(modDay(b.t)+(b.orderBias||0)));
 
-  const allAtStn=info.sched.map(x=>({...x,isMine:false,isConflict:conflictNames.has(x.name+'|'+x.t)}));
-  if(t1!=null&&(slot==='ALL'||slot==='T1'))allAtStn.push({t:t1,name:(D.name||'New Train')+' (Time 1)',type:D.type,isMine:true});
-  if(t2!=null&&(slot==='ALL'||slot==='T2'))allAtStn.push({t:t2,name:(D.name||'New Train')+' (Time 2 RT)',type:D.type,isMine:true});
-  allAtStn.sort((a,b)=>modDay(a.t)-modDay(b.t));
-
-  let fullListHtml=allAtStn.map(r=>`<div class="cpop-row ${r.isMine?'is-mine':r.isConflict?'is-conflict':''}">
+  let fullListHtml=allAtStn.length?allAtStn.map(r=>`<div class="cpop-row ${r.isMine?'is-mine':r.hit?'is-conflict':''}">
     <span><b>${fmtL(r.t)}</b> &middot; <span class="dot" style="background:${TCOL(r.type)}"></span>${esc(r.name)}</span>
-    ${r.isConflict?'<span class="cpop-tag">Near</span>':r.isMine?'<span style="font-size:10px;color:var(--acc)">YOU</span>':''}
-  </div>`).join('');
+    ${r.hit?`<span class="cpop-tag">${r.hit.diff===0?'EXACT':r.hit.diff+'m off'}</span>`:r.isMine?'<span style="font-size:10px;color:var(--acc);font-weight:700">YOUR TRAIN</span>':''}
+  </div>`).join(''):`<div class="cpop-row"><span class="hint">No trains scheduled at ${esc(stName)}</span></div>`;
 
   pop.innerHTML=`
     <div class="cpop-head">
@@ -683,7 +716,7 @@ function showClashPopover(btn,rowIdx,pin,focusSlot){
       <button type="button" class="sm ghost" id="cpopClose" style="padding:1px 6px;color:#fff">&times;</button>
     </div>
     <div class="cpop-sub" style="display:flex;justify-content:space-between;align-items:center;gap:4px">
-      <span>${slot==='T2'?'Time 2 (RT)'+ (t2!=null?' '+fmtL(t2):''):slot==='T1'?'Time 1'+ (t1!=null?' '+fmtL(t1):''):'Both T1 & Time 2 (RT)'}</span>
+      <span>${slot==='T2'?'Time 2 (RT)'+(t2!=null?' '+fmtL(t2):''):slot==='T1'?'Time 1'+(t1!=null?' '+fmtL(t1):''):'All Trains at '+esc(stName)}</span>
       <span style="display:inline-flex;gap:3px">
         <button type="button" class="sm" data-cslot="ALL" style="padding:1px 6px;font-size:10.5px;${slot==='ALL'?'border-color:var(--acc);color:#fff':''}">All</button>
         <button type="button" class="sm" data-cslot="T1" style="padding:1px 6px;font-size:10.5px;${slot==='T1'?'border-color:var(--acc);color:#fff':''}">T1 (${info.t1Conflicts.length})</button>
@@ -691,8 +724,6 @@ function showClashPopover(btn,rowIdx,pin,focusSlot){
       </span>
     </div>
     <div class="cpop-body">
-      ${topConflictsHtml}
-      <div style="padding:4px 11px;font-size:10.5px;font-weight:700;color:var(--mut);background:#080e1a;border-bottom:1px solid #1e293b">ALL TRAINS AT ${esc(stName)}</div>
       ${fullListHtml}
     </div>
   `;
@@ -1032,11 +1063,14 @@ function renderDraft(){
   ${D.msg?`<div class="warn" style="margin-top:4px">${esc(D.msg)}</div>`:''}`;
 
   if(D.wp.length){
+    const hasT1=D.t1.some(x=>x!=null),hasT2=D.t2.some(x=>x!=null);
     h+=`<div class="btns">
       <button type="button" class="sm" id="dClear">Clear Route</button>
       ${done?`<button type="button" class="sm" id="dRev">⇄ Reverse</button>
       <button type="button" class="sm" id="dStopAll">Stop All</button>
       <button type="button" class="sm" id="dStopMaj">Major Only</button>
+      ${hasT1?`<button type="button" class="sm" id="dClearT1" title="Clear all Time 1 entries">Clear T1</button>`:''}
+      ${hasT2?`<button type="button" class="sm" id="dClearT2" title="Clear all Time 2 (RT) entries">Clear T2</button>`:''}
       ${D.t1[n-1]!=null?`<button type="button" class="sm" id="dAutoRT" title="Set Time 2 start 45m after Time 1 arrival">Auto RT (+45m)</button>`:''}`:''}
     </div>`;
   }
@@ -1098,9 +1132,10 @@ function tcell(k,i,badge=''){
     if(k===1&&i>0&&arr[i-1]!=null)g=`+${arr[i]-arr[i-1]}${D.srcs[i-1]!=='data'?'<span class="est">~</span>':''}`;
     if(k===2&&i<D.path.length-1&&arr[i+1]!=null)g=`+${arr[i]-arr[i+1]}${D.srcs[i]!=='data'?'<span class="est">~</span>':''}`;
   }
-  return `<div class="tcell-wrap">${badge}<div class="tcell-main"><div class="tc">
+  return `<div class="tcell-wrap"><span class="clash-slot">${badge}</span><div class="tcell-main"><div class="tc">
     <button type="button" data-k="${k}" data-i="${i}" data-d="-5">&minus;</button>
     <input class="tin" data-k="${k}" data-i="${i}" value="${fmtC(t)}" placeholder="--:--">
+    <button type="button" class="clk-btn" data-clk="1" data-k="${k}" data-i="${i}" title="Pick time with clock">🕒</button>
     <button type="button" data-k="${k}" data-i="${i}" data-d="5">+</button>
   </div><span class="g">${g}${t!=null?dayTag(t):''}</span></div></div>`;
 }
@@ -1111,6 +1146,120 @@ function commitCell(k,i,abs){
   if(k===1)setT1(i,abs);else setT2(i,abs);
   renderDraft();
 }
+
+/* ---------- Analog Clock Time Picker ---------- */
+let CLK=null;
+function openClockPicker(anchor,k,i){
+  if(!D)return;
+  const arr=k===1?D.t1:D.t2;
+  const cur=arr[i]!=null?modDay(arr[i]):480; // default 8:00 AM
+  const h24=Math.floor(cur/60);
+  const ampm=h24>=12?'PM':'AM';
+  const h12=(h24%12)||12;
+  const min=r5(cur%60)%60;
+  CLK={k,i,mode:'hour',h12,min,ampm,oldAbs:arr[i]};
+  renderClockPop(anchor);
+}
+function closeClockPicker(){
+  CLK=null;
+  $('clockPop').style.display='none';
+}
+function renderClockPop(anchor){
+  const pop=$('clockPop');
+  if(!CLK){pop.style.display='none';return}
+  const stName=NODES[D.path[CLK.i]].name;
+  const hStr=String(CLK.h12);
+  const mStr=String(CLK.min).padStart(2,'0');
+  const isHour=CLK.mode==='hour';
+  const valIndex=isHour?(CLK.h12%12):(CLK.min/5);
+  const angleDeg=valIndex*30-90;
+  const radius=76;
+
+  let numsHtml='';
+  for(let idx=0;idx<12;idx++){
+    const deg=idx*30-90;
+    const rad=deg*Math.PI/180;
+    const cx=98+radius*Math.cos(rad);
+    const cy=98+radius*Math.sin(rad);
+    const label=isHour?(idx===0?12:idx):String(idx*5).padStart(2,'0');
+    const selected=isHour?((idx===0?12:idx)===CLK.h12):((idx*5)===CLK.min);
+    numsHtml+=`<button type="button" class="clk-num ${selected?'sel':''}" data-cval="${isHour?(idx===0?12:idx):(idx*5)}" style="left:${cx.toFixed(1)}px;top:${cy.toFixed(1)}px">${label}</button>`;
+  }
+
+  pop.innerHTML=`
+    <div class="clk-head">
+      <div>
+        <div style="font-size:10.5px;color:var(--mut)">${esc(stName)} &middot; ${CLK.k===2?'Time 2 (RT)':'Time 1'}</div>
+        <div class="clk-disp">
+          <span data-cmode="hour" style="cursor:pointer;${isHour?'color:var(--acc);text-decoration:underline':''}">${hStr}</span>:<span data-cmode="min" style="cursor:pointer;${!isHour?'color:var(--acc);text-decoration:underline':''}">${mStr}</span>
+          <span style="font-size:12px;color:var(--mut)">${CLK.ampm}</span>
+        </div>
+      </div>
+      <div class="clk-ampm">
+        <button type="button" data-campm="AM" class="${CLK.ampm==='AM'?'act':''}">AM</button>
+        <button type="button" data-campm="PM" class="${CLK.ampm==='PM'?'act':''}">PM</button>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--mut)">${isHour?'Select Hour':'Select Minutes (5m)'}</div>
+    <div class="clk-dial-wrap">
+      <div class="clk-dial">
+        <div class="clk-center"></div>
+        <div class="clk-hand" style="width:${radius}px;transform:rotate(${angleDeg}deg)"></div>
+        ${numsHtml}
+      </div>
+    </div>
+    <div class="clk-foot">
+      <button type="button" class="sm ghost" id="clkCancel">Cancel</button>
+      <button type="button" class="sm pri" id="clkOk">Set Time</button>
+    </div>
+  `;
+  pop.style.display='block';
+  if(anchor){
+    const r=anchor.getBoundingClientRect();
+    const pw=pop.offsetWidth||256,ph=pop.offsetHeight||300;
+    let left=r.left-pw/2+r.width/2;
+    left=Math.max(10,Math.min(window.innerWidth-pw-10,left));
+    let top=r.bottom+6;
+    if(top+ph>window.innerHeight-10)top=Math.max(10,r.top-ph-6);
+    pop.style.left=left+'px';
+    pop.style.top=top+'px';
+  }
+}
+$('clockPop').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(!CLK)return;
+  if(e.target.closest('#clkCancel')){closeClockPicker();return}
+  const mBtn=e.target.closest('[data-cmode]');
+  if(mBtn){CLK.mode=mBtn.dataset.cmode;renderClockPop();return}
+  const apBtn=e.target.closest('[data-campm]');
+  if(apBtn){CLK.ampm=apBtn.dataset.campm;renderClockPop();return}
+  const numBtn=e.target.closest('[data-cval]');
+  if(numBtn){
+    const v=+numBtn.dataset.cval;
+    if(CLK.mode==='hour'){CLK.h12=v;CLK.mode='min';renderClockPop();}
+    else{CLK.min=v;renderClockPop();}
+    return;
+  }
+  if(e.target.closest('#clkOk')){
+    const h24=(CLK.h12%12)+(CLK.ampm==='PM'?12:0);
+    const modMins=h24*60+CLK.min;
+    let abs=modMins;
+    if(CLK.oldAbs!=null){
+      let best=modMins,bd=1e9;
+      for(let day=-3;day<=3;day++){
+        const cand=modMins+day*1440,d=Math.abs(cand-CLK.oldAbs);
+        if(d<bd){bd=d;best=cand}
+      }
+      abs=best;
+    }
+    const {k,i}=CLK;
+    closeClockPicker();
+    commitCell(k,i,abs);
+  }
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#clockPop')&&!e.target.closest('[data-clk]'))closeClockPicker();
+});
 
 $('cNew').addEventListener('change',e=>{
   const t=e.target;if(!D)return;
@@ -1152,6 +1301,14 @@ $('cNew').addEventListener('pointerout',e=>{
 });
 
 $('cNew').addEventListener('click',e=>{
+  /* Click on clock picker button */
+  const clkBtn=e.target.closest('button[data-clk]');
+  if(clkBtn&&D){
+    e.stopPropagation();
+    openClockPicker(clkBtn,+clkBtn.dataset.k,+clkBtn.dataset.i);
+    return;
+  }
+
   /* Click on red conflict badge pins the popover open */
   const clashBtn=e.target.closest('.clash-btn[data-clash]');
   if(clashBtn&&D){
@@ -1195,6 +1352,8 @@ $('cNew').addEventListener('click',e=>{
     if(t.id==='dClose'){exitCreate();return}
     if(t.id==='dUndo'){popUndo();return}
     if(t.id==='dClear'){pushUndo();const keep={type:D.type};D=newDraft();D.type=keep.type;setMapMode('edit');renderDraft();return}
+    if(t.id==='dClearT1'){pushUndo();D.t1=Array(D.path.length).fill(null);D.s1=null;renderDraft();toast('Cleared Time 1');return}
+    if(t.id==='dClearT2'){pushUndo();D.t2=Array(D.path.length).fill(null);D.s2=null;renderDraft();toast('Cleared Time 2 (RT)');return}
     if(t.id==='dRev'){pushUndo();setRoute(D.wp.slice().reverse());renderDraft();toast('Route reversed');return}
     if(t.id==='dStopAll'){pushUndo();D.stops=D.path.map(()=>true);renderDraft();return}
     if(t.id==='dStopMaj'){pushUndo();D.stops=D.path.map((nd,i)=>i===0||i===D.path.length-1||NODES[nd].adj.length>=3);renderDraft();toast('Set to junction/major stops');return}
@@ -1345,7 +1504,7 @@ $('bExcel').onclick=()=>$('fExcel').click();
 $('fExcel').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
 ['dragenter','dragover'].forEach(t=>window.addEventListener(t,e=>e.preventDefault()));
 window.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0])});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){$('out').style.display='none';$('statsModal').style.display='none';hideClashPopover(true)}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){$('out').style.display='none';$('statsModal').style.display='none';hideClashPopover(true);closeClockPicker()}});
 
 function renderAll(){renderInfo();renderDraft();renderList()}
 load();renderAll();
