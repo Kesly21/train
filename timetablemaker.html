@@ -738,6 +738,14 @@ function showClashPopover(btn,rowIdx,pin,focusSlot){
   if(top+ph>window.innerHeight-10)top=Math.max(10,rect.top-ph-6);
   pop.style.left=left+'px';
   pop.style.top=top+'px';
+
+  const cBody=pop.querySelector('.cpop-body');
+  const mineEl=cBody&&cBody.querySelector('.cpop-row.is-mine');
+  if(cBody&&mineEl){
+    requestAnimationFrame(()=>{
+      cBody.scrollTop=Math.max(0,mineEl.offsetTop-cBody.offsetTop-(cBody.clientHeight-mineEl.offsetHeight)/2);
+    });
+  }
 }
 
 function hideClashPopover(force){
