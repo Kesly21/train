@@ -84,12 +84,14 @@ tr.st-row.active-peek{background:#172b46;outline:1px solid var(--acc)}
 .est{color:var(--warn)}
 
 /* Interactive Conflict Badge & Hover/Click Popover */
+.tcell-wrap{display:flex;align-items:center;gap:4px}
+.tcell-main{display:flex;flex-direction:column;align-items:center}
 .clash-btn{
-  display:inline-flex;align-items:center;gap:3px;
+  display:inline-flex;align-items:center;gap:2px;
   background:rgba(248,113,113,.22);color:#fca5a5;
   border:1px solid var(--bad);border-radius:999px;
-  padding:1px 7px;font-size:10.5px;font-weight:700;
-  margin-left:5px;cursor:pointer;vertical-align:middle;
+  padding:2px 6px;font-size:10px;font-weight:700;
+  white-space:nowrap;flex:none;cursor:pointer;
   transition:transform .12s,background .12s;
 }
 .clash-btn:hover{background:rgba(248,113,113,.38);color:#fff;transform:scale(1.06)}
@@ -720,7 +722,8 @@ $('clashPop').addEventListener('click',e=>{
   const sb=e.target.closest('button[data-cslot]');
   if(sb&&$('clashPop').dataset.rowIdx!=null){
     const idx=+$('clashPop').dataset.rowIdx;
-    const badge=$('cNew').querySelector(`.clash-btn[data-clash="${idx}"]`)||$('cNew');
+    const slotSel=sb.dataset.cslot==='T1'?'[data-cslot="T1"]':sb.dataset.cslot==='T2'?'[data-cslot="T2"]':'';
+    const badge=$('cNew').querySelector(`.clash-btn[data-clash="${idx}"]${slotSel}`)||$('cNew').querySelector(`.clash-btn[data-clash="${idx}"]`)||$('cNew');
     showClashPopover(badge,idx,true,sb.dataset.cslot);
   }
 });
@@ -770,7 +773,7 @@ $('info').addEventListener('click',e=>{
 const TYPENAME={SF:'SF Express',EX:'Express',STB:'Shatabdi',GR:'Garib Rath',TJ:'Tejas',RAJ:'Rajdhani',VB:'Vande Bharat'};
 const newDraft=()=>({
   id:0,name:'',nameAuto:true,type:'SF',wp:[],path:[],stops:[],t1:[],t2:[],gaps:[],srcs:[],
-  s1:null,s2:null,msg:'',peekNode:null,shiftAll:true,undoStack:[]
+  s1:null,s2:null,msg:'',peekNode:null,shiftAll:false,undoStack:[]
 });
 function pushUndo(){
   if(!D)return;
@@ -995,6 +998,14 @@ function renderPeekBox(){
 }
 
 function renderDraft(){
+  const asideEl=$('aside'),oldTab=$('dTab')?.closest('.sc'),oldPeek=$('cNew').querySelector('.peek-list');
+  const savedScroll={
+    aside:asideEl?asideEl.scrollTop:0,
+    tab:oldTab?oldTab.scrollTop:0,
+    peek:oldPeek?oldPeek.scrollTop:0,
+    winX:window.scrollX,
+    winY:window.scrollY
+  };
   renderRouteMap();renderInfo();hideClashPopover(true);
   const C=$('cNew');
   if(!createMode||!D){C.style.display='none';syncPanels();return}
@@ -1054,18 +1065,18 @@ function renderDraft(){
       if(cInfo){
         if(cInfo.t1Conflicts.length){
           const tight1=cInfo.minDiff1<=5;
-          badge1=`<button type="button" class="clash-btn ${tight1?'tight5':''}" data-clash="${i}" data-cslot="T1" title="Time 1 conflict (${cInfo.t1Conflicts.length} nearby train(s))">T1 ! ${cInfo.minDiff1}m</button>`;
+          badge1=`<button type="button" class="clash-btn ${tight1?'tight5':''}" data-clash="${i}" data-cslot="T1" title="Time 1 conflict (${cInfo.t1Conflicts.length} nearby train(s))">! ${cInfo.minDiff1}m</button>`;
         }
         if(cInfo.t2Conflicts.length){
           const tight2=cInfo.minDiff2<=5;
-          badge2=`<button type="button" class="clash-btn ${tight2?'tight5':''}" data-clash="${i}" data-cslot="T2" title="Time 2 (RT) conflict (${cInfo.t2Conflicts.length} nearby train(s))">RT ! ${cInfo.minDiff2}m</button>`;
+          badge2=`<button type="button" class="clash-btn ${tight2?'tight5':''}" data-clash="${i}" data-cslot="T2" title="Time 2 (RT) conflict (${cInfo.t2Conflicts.length} nearby train(s))">! ${cInfo.minDiff2}m</button>`;
         }
       }
       h+=`<tr class="st-row ${D.stops[i]?'':'off'} ${isPeek?'active-peek':''}" data-idx="${i}">
         <td><input type="checkbox" data-stop="${i}"${D.stops[i]?' checked':''}></td>
-        <td><b>${esc(NODES[nd].name)}</b>${badge1}${badge2}</td>
-        <td>${tcell(1,i)}</td>
-        <td>${tcell(2,i)}</td>
+        <td><b>${esc(NODES[nd].name)}</b></td>
+        <td>${tcell(1,i,badge1)}</td>
+        <td>${tcell(2,i,badge2)}</td>
       </tr>`;
     }
     h+=`</table></div>
@@ -1074,19 +1085,24 @@ function renderDraft(){
     </div>`;
   }
   C.innerHTML=h;
+  const newTab=$('dTab')?.closest('.sc'),newPeek=$('cNew').querySelector('.peek-list');
+  if(asideEl)asideEl.scrollTop=savedScroll.aside;
+  if(newTab)newTab.scrollTop=savedScroll.tab;
+  if(newPeek)newPeek.scrollTop=savedScroll.peek;
+  window.scrollTo(savedScroll.winX,savedScroll.winY);
 }
 
-function tcell(k,i){
+function tcell(k,i,badge=''){
   const arr=k===1?D.t1:D.t2,t=arr[i];let g='';
   if(t!=null){
     if(k===1&&i>0&&arr[i-1]!=null)g=`+${arr[i]-arr[i-1]}${D.srcs[i-1]!=='data'?'<span class="est">~</span>':''}`;
     if(k===2&&i<D.path.length-1&&arr[i+1]!=null)g=`+${arr[i]-arr[i+1]}${D.srcs[i]!=='data'?'<span class="est">~</span>':''}`;
   }
-  return `<div class="tc">
+  return `<div class="tcell-wrap">${badge}<div class="tcell-main"><div class="tc">
     <button type="button" data-k="${k}" data-i="${i}" data-d="-5">&minus;</button>
     <input class="tin" data-k="${k}" data-i="${i}" value="${fmtC(t)}" placeholder="--:--">
     <button type="button" data-k="${k}" data-i="${i}" data-d="5">+</button>
-  </div><span class="g">${g}${t!=null?dayTag(t):''}</span>`;
+  </div><span class="g">${g}${t!=null?dayTag(t):''}</span></div></div>`;
 }
 
 function commitCell(k,i,abs){
@@ -1261,7 +1277,7 @@ $('list').addEventListener('click',e=>{
   if(t.dataset.x){if(confirm('Delete this train?')){TRAINS=TRAINS.filter(x=>x.id!==+t.dataset.x);save();renderAll()}}
   else if(t.dataset.e){
     const s=TRAINS.find(x=>x.id===+t.dataset.e);
-    D=Object.assign(newDraft(),JSON.parse(JSON.stringify(s)),{msg:'',peekNode:s.path[0],shiftAll:true,undoStack:[]});
+    D=Object.assign(newDraft(),JSON.parse(JSON.stringify(s)),{msg:'',peekNode:s.path[0],shiftAll:false,undoStack:[]});
     D.id=s.id;createMode=true;setMapMode('peek');
     $('bCreate').classList.add('on');$('bCreate').innerHTML='&#10003; Creating';
     renderAll();
