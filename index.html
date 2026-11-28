@@ -75,8 +75,8 @@ aside{width:auto}
 #c1,#c2,#c3{flex:none;max-height:none}
 #list{max-height:40vh}#warns{max-height:30vh}
 #c2{display:none}
-body.hasSel{padding-bottom:42vh}
-body.hasSel #c2{display:flex;position:fixed;left:0;right:0;bottom:0;max-height:38vh;z-index:40;border-radius:14px 14px 0 0;border-bottom:none;box-shadow:0 -8px 26px rgba(0,0,0,.6)}
+body.hasSel{padding-bottom:0}
+body.hasSel #c2{display:flex;order:-1;position:static;max-height:60vh}
 #c2 #detail{flex:1;min-height:0;max-height:none}
 body.hasSel .xbtn{display:inline-block}
 #live{right:6px;bottom:6px}
@@ -94,8 +94,8 @@ tr[data-r]:active,tr[data-n]:active{background:#1a2740}
 .lg{cursor:pointer;padding:2px 9px;border:1px solid var(--line);border-radius:999px;user-select:none}
 .lg.off{opacity:.35;text-decoration:line-through}
 @media(max-width:900px){
-body.hasSel{padding-bottom:52vh}
-body.hasSel #c2{max-height:50vh}
+body.hasSel{padding-bottom:0}
+body.hasSel #c2{max-height:60vh}
 body.hasSel #c2.big{max-height:86vh}
 body.hasSel #c2{animation:up .16s ease-out}
 @keyframes up{from{transform:translateY(26px);opacity:.3}}
@@ -114,7 +114,7 @@ button,select,#q{min-height:40px}
 #pick .pk-l{overflow-y:auto;max-height:260px;-webkit-overflow-scrolling:touch}
 #pick .pk{display:flex;align-items:center;gap:8px;padding:10px;cursor:pointer;border-bottom:1px solid #162038}
 #pick .pk:hover,#pick .pk:active{background:#13213a}#pick .pk i{width:10px;height:10px;border-radius:50%;flex:none}#pick .pk span{color:var(--mut);margin-left:auto;font-size:11px;white-space:nowrap}
-@media(max-width:900px){#pick{left:6px!important;right:6px;bottom:6px;top:auto!important;width:auto;max-height:52%}#pick .pk-l{max-height:36vh}#pick .pk{padding:13px 10px}}
+@media(max-width:900px){#pick{position:static;width:auto;max-height:42vh;box-shadow:none;z-index:auto;background:var(--panel)}#pick .pk-l{max-height:30vh}#pick .pk{padding:13px 10px}}
 </style>
 </head>
 <body>
@@ -353,7 +353,7 @@ function showPick(i,ev,hl,keep){const hs=lastAct.filter(a=>a.s.halted&&a.s.at.no
   const nxt=a=>{const n=a.run.stops[a.s.i+1];return n?'next '+NODES[n.node].name+' '+fmtT(n.t):'terminates'};
   P.innerHTML='<div class="pk-h"><span>'+esc(NODES[i].name)+' &middot; '+hs.length+' trains halted</span><button class="pk-x" aria-label="Close">&times;</button></div><div class="pk-l">'+
     hs.map(a=>`<div class="pk" data-id="${esc(a.run.id)}" data-k="${a.k}"><i style="background:${TC(a.run.type)}"></i><b>${esc(a.run.id)}</b><span>${esc(nxt(a))}</span></div>`).join('')+'</div>';
-  P.style.display='flex';pickNode=i;pickKey=key;
+  P.style.display='flex';pickNode=i;pickKey=key;{const w=$('mapwrap');if(mq.matches){if(P.previousElementSibling!==w)w.after(P)}else if(P.parentNode!==w)w.appendChild(P)}
   if(!keep&&ev&&!mq.matches){const r=$('mapwrap').getBoundingClientRect(),w=P.offsetWidth,h=P.offsetHeight;let x=ev.clientX-r.left+14,y=ev.clientY-r.top+14;
     if(x+w>r.width-4)x=ev.clientX-r.left-w-14;if(y+h>r.height-4)y=r.height-h-6;P.style.left=Math.max(4,x)+'px';P.style.top=Math.max(4,y)+'px'}}
 function refreshPick(){if(pickNode!=null)showPick(pickNode,null,null,true)}
